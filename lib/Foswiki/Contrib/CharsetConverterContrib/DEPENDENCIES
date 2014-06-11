@@ -1,0 +1,2 @@
+File::Copy,>0,cpan,Required
+Foswiki,>=1.1,perl,Required

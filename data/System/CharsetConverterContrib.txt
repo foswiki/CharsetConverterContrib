@@ -1,0 +1,107 @@
+%META:TOPICINFO{author="ProjectContributor" version="1" date="1402505433"}%
+<!--
+   * Set SHORTDESCRIPTION = %$SHORTDESCRIPTION%
+-->
+---+!! CharsetConverterContrib
+
+%SHORTDESCRIPTION%
+
+%TOC%
+
+This module is used to convert the character set encoding used in *RcsWrap and RcsLite* stores.
+
+To support international character sets, Foswiki is configured with a
+={Site}{CharSet}=, which sets the encoding used for characters.
+This determines the range of characters (glyphs) that can be
+used in for naming wiki topics and attachments, and in content
+stored in topics.
+
+(To understand what this means on a technical level, read
+Foswiki:Development.UnderstandingEncodings)
+
+The default encoding used by Foswiki is iso-8859-1, which is a
+reasonable choice for many western languages.  However there are many
+other languages (for example, Arabic, Chinese, Hebrew, Hindi) that have
+characters that do not appear in this charset. Even some basic characters
+like the euro symbol are missing from iso-8859-1. If you didn't consider the
+possibility, when you set up your wiki, that your users might want to
+include text using these characters, then you may well have accepted
+the default. 
+
+Unfortunately once you have chosen a ={Site}{CharSet}= and created a bunch
+of topics using RCS, it becomes very risky to change, as the charset is associated
+with the entire database site, and not with individual topics. If you just
+changed the ={Site}{CharSet}=, then any characters that do not have the same
+position in the new charset would be garbled. Of course you might get
+lucky; you can change freely between any character sets that have the same
+characters at the same codepoints; but it's high risk.
+ 
+Fortunately there is one global standard encoding, called UTF-8, which
+supports most character sets known in the world today. Ideally all Foswikis
+should use UTF-8, but we have a legacy of existing sites that don't. So we
+need some way to convert an RCS-based wiki from any existing ={Site}{CharSet}= to UTF-8.
+
+And that's what this module provides. If you have a store that is:
+   1 Set up to use some ={Site}{CharSet}= *other than* UTF-8
+   1 Using =RcsWrap= or =RcsLite= as it's ={Store}{Implementation}=
+then this module can convert it to using UTF-8, including all the topic
+histories.
+
+Even if you don't have an immediate
+need for non-western character sets this is worth doing, as Foswiki is moving
+in the direction of standardising on UTF-8.
+ 
+Note that this module converts all the histories of all your topics,
+as well as the latest version of the topic. It also maps all web,
+topic and attachment names. It does not, however, touch the content of
+attachments.
+
+---++ Installation
+This extension is tested with Foswiki 1.1.0 and later. If your Foswiki
+installation is older than that, then upgrade your Foswiki first.
+
+%$INSTALL_INSTRUCTIONS%
+
+---++ Usage
+The convertor is used from the command-line on your wiki server (if you do not have access to the command line then we are sorry, but there is currently no way for you to use the conversion).
+
+To use the convertor, =cd= to the =tools= directory in your installation and =perl convert_charset.pl=.
+
+The script will convert the Foswiki RCS database pointed at by
+{DataDir} and {PubDir} from the existing character set (as set
+by {Site}{CharSet}) to UTF8.
+
+Options:
+| =-i= | report what would be done only, do not convert anything |
+| =-q= | work silently (unless there's an error) |
+| =-a= | abort on error (default is to report and continue) |
+
+Once you have run the script without -i, all:
+   * web names
+   * topic names
+   * attachment names
+   * topic content
+will be converted to UTF8. The conversion is performed _in place_ on the data
+and pub directories.
+
+Note that no conversion is performed on
+   * log files
+   * working/
+   * temporary files
+
+Once conversion is complete you must change your ={Site}{CharSet}= to 'utf-8'.
+
+---++ Info
+
+|  Author: | Foswiki:Main.CrawfordCurrie |
+|  Copyright &copy;: 2011-2014 | Foswiki Contributors |
+|  License: | GPL ([[http://www.gnu.org/copyleft/gpl.html][GNU General Public License]]) |
+|  Dependencies: | %$DEPENDENCIES% |
+|  Version: | %$VERSION% |
+|  Change History: | <!-- versions below in reverse order -->&nbsp; |
+|  1.1 (11 Jun 2014) | Public release |
+|  1.0 (2 Oct 2011) | Initial version |
+|  Home: | http://foswiki.org/Extensions/%TOPIC% |
+|  Support: | http://foswiki.org/Support/%TOPIC% |
+
+

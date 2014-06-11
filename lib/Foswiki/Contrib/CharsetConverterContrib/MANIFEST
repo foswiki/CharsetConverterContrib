@@ -1,0 +1,5 @@
+!noci
+data/System/CharsetConverterContrib.txt 0644 Documentation page
+lib/Foswiki/Contrib/CharsetConverterContrib.pm  Perl module 
+lib/Foswiki/Contrib/CharsetConverterContrib/Config.spec 0444 Configuration
+tools/convert_charset.pl 0555 Script
