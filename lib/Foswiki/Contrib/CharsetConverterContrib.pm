@@ -18,17 +18,21 @@ use strict;
 use warnings;
 use File::Copy;
 
-our $VERSION = '1.1';
-our $RELEASE = '11 Jun 2014';
+our $VERSION = '1.2';
+our $RELEASE = '1 Jun 2015';
 our $SHORTDESCRIPTION =
-  'Convert entire Foswiki RCS databases from one character set to another';
+  'Convert entire Foswiki RCS databases from one character set to UTF-8';
 
 our $options;
 our $session;
 
 sub report {
     return if $options->{-q};
-    print STDERR join( ' ', @_ ) . "\n";
+    print join( ' ', @_ ) . "\n";
+}
+
+sub warning {
+    print STDERR "WARNING: " . join( ' ', @_ ) . "\n";
 }
 
 sub error {
@@ -36,34 +40,54 @@ sub error {
         die join( ' ', @_ );
     }
     else {
-        print STDERR join( ' ', @_ );
+        print STDERR "ERROR: " . join( ' ', @_ );
     }
+}
+
+sub detect_encoding {
+    my $str = shift;
+
+    return;
 }
 
 # Convert a byte string encoded in the {Site}{CharSet} to a byte
 # string encoded in utf8
 # Return 1 if a conversion happened, 0 otherwise
-sub _convert {
-    my $old = $_[0];
+sub _convert_string {
+    my ( $old, $where ) = @_;
+    return 0 unless defined $old;
+    my $e = $Foswiki::cfg{Site}{CharSet};
+
+    if ( $options->{-r} ) {
+        require Encode::Detect::Detector;
+        my $de = Encode::Detect::Detector::detect($old);
+        if ( $de && $de ne $Foswiki::cfg{Site}{CharSet} ) {
+            warning("$de encoding detected in $where");
+            $e = $de;
+        }
+    }
 
     # Convert octets encoded using site charset to unicode codepoints.
     # Note that we use Encode::FB_HTMLCREF; this should be a nop as
     # unicode can accomodate all characters.
-    $_[0] =
-      Encode::decode( $Foswiki::cfg{Site}{CharSet}, $_[0],
-        Encode::FB_HTMLCREF );
+    my $t;
+    eval { $t = Encode::decode( $e, $old, Encode::FB_CROAK ); };
+    if ($@) {
 
-    # Convert the internal representation to utf-8 bytes. The utf8 flag
-    # is turned off on the resultant string.
-    utf8::encode( $_[0] );
+        # Broken encoding; try using the {Site}{CharSet} with
+        # HTMLCREF (good luck with that!)
+        $t = Encode::decode( $e, $old, Encode::FB_HTMLCREF );
+    }
+
+    # Convert to utf-8 bytes.
+    $_[0] = Encode::encode_utf8($t);
 
     return ( $_[0] ne $old ) ? 1 : 0;
 }
 
 sub _rename {
     my ( $from, $to ) = @_;
-    my $uto = $to;
-    utf8::decode($uto);
+    my $uto = Encode::decode_utf8($to);
     report "Move $uto";
     return if ( $options->{-i} );
     File::Copy::move( $from, $to )
@@ -72,7 +96,7 @@ sub _rename {
 
 =begin TML
 
----++ StaticMethod convertCollection($collection)
+---++ StaticMethod convert_database(%args)
 
 Given the name of a collection (/ separated web name or empty
 string for the root) convert
@@ -80,8 +104,8 @@ the topics and filenames in that collection to a UTF8 namespace.
 
 =cut
 
-sub convertCollection {
-    my ( $collection, %args ) = @_;
+sub convert_database {
+    my (%args) = @_;
 
     $options = \%args;
 
@@ -93,13 +117,13 @@ sub convertCollection {
     # First we rename all webs and files as necessary by
     # calling the recursive collection rename on the root web
     foreach my $tree ( $Foswiki::cfg{DataDir}, $Foswiki::cfg{PubDir} ) {
-        _rename_collection( $tree, $collection );
+        _rename_collection( $tree, '' );
     }
 
     # All file and directory names should now be utf8
 
     # Now we convert the content of topics
-    _convert_topics_contents($collection);
+    _convert_topics_contents('');
 
     # And that's it!
 
@@ -123,7 +147,7 @@ sub _rename_collection {
 
         #print STDERR "Collected $e $Foswiki::cfg{Site}{CharSet}\n";
         my $ne = $e;
-        if ( _convert($ne) ) {
+        if ( _convert_string( $ne, "name $webpath$ne" ) ) {
 
             # $ne is encoded using utf8 but is *not* perl internal
             #my $blah = $ne;
@@ -155,8 +179,7 @@ sub _convert_topic {
     my $handler =
       Foswiki::Store::VC::RcsLiteHandler->new( $session->{store}, $web,
         $topic );
-    my $uh = "$web.$topic";
-    utf8::decode($uh);
+    my $uh = Encode::decode_utf8("$web.$topic");
 
     # Force reading of the topic history, all the way down to revision 1
     $handler->getRevision(1);
@@ -164,14 +187,19 @@ sub _convert_topic {
     if ( $handler->{state} ne 'nocommav' ) {
 
         # need to convert fields
-        my $n = 1;
+        my $n  = 1;
+        my $in = "content of $uh,v";
         foreach my $rev ( @{ $handler->{revs} } ) {
-            $converted += _convert( $rev->{text} ) if defined $rev->{text};
-            $converted += _convert( $rev->{log} )  if defined $rev->{log};
-            $converted += _convert( $rev->{comment} )
+            $converted += _convert_string( $rev->{text}, $in )
+              if defined $rev->{text};
+            $converted += _convert_string( $rev->{log}, $in )
+              if defined $rev->{log};
+            $converted += _convert_string( $rev->{comment}, $in )
               if defined $rev->{comment};
-            $converted += _convert( $rev->{desc} )   if defined $rev->{desc};
-            $converted += _convert( $rev->{author} ) if defined $rev->{author};
+            $converted += _convert_string( $rev->{desc}, $in )
+              if defined $rev->{desc};
+            $converted += _convert_string( $rev->{author}, $in )
+              if defined $rev->{author};
         }
         if ($converted) {
             report "Converted history of $uh ($converted changes)";
@@ -190,7 +218,7 @@ sub _convert_topic {
 
     # Convert .txt
     my $raw = $handler->readFile( $handler->{file} );
-    $converted = _convert($raw);
+    $converted = _convert_string( $raw, "content of $handler->{file}" );
     if ($converted) {
         report "Converted .txt of $uh";
         $handler->saveFile( $handler->{file}, $raw ) unless $options->{-i};

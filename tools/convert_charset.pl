@@ -55,16 +55,19 @@ unless ( $args{-i} ) {
 
 Foswiki RCS database character set conversion
 
-   -i - report what would be done only, do not convert anything
-   -q - work silently (unless there's an error)
-   -a - abort on error (default is to report and continue)
-
+   -i - inspect - what would be done only, do not convert anything
+   -q - quietly - (unless there's an error)
+   -a - abort - on error (default is to report and continue)
+   -r - repair - detect the encoding of each string and repair
+        inconsistencies. (requires Encode::Detect)
+ 
 This script will convert the Foswiki RCS database pointed at by
 {DataDir} and {PubDir} from the existing character set (as set
 by {Site}{CharSet}) to UTF8.
 
 You can run the script in "inspection" mode by passing -i on the
-command line. No changes will be made to the database.
+command line. No changes will be made to the database. If it fails
+with an encoding error, run it with -r.
 
 Once you have run the script without -i, all:
     * web names
@@ -96,7 +99,7 @@ INFORM
       );
 }
 
-Foswiki::Contrib::CharsetConverterContrib::convertCollection( '', %args );
+Foswiki::Contrib::CharsetConverterContrib::convert_database(%args);
 
 # Prompt user for a confirmation
 sub ask {
