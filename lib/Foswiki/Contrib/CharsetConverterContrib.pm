@@ -28,7 +28,7 @@ our $session;
 
 sub report {
     return if $options->{-q};
-    print join( ' ', @_ ) . "\n";
+    print STDERR join( ' ', @_ ) . "\n";
 }
 
 sub warning {
@@ -50,6 +50,21 @@ sub detect_encoding {
     return;
 }
 
+# Add any hand-tuned fixups here to adjust for strange
+# encodings detected in your local data.  Passed 2 arguments
+# - The detected encoding,  and the data.
+#
+sub _fixupDetect {
+
+    #my $enc, $data = @_;
+
+    # return 'iso-8859-1' if ( $_[0] =~ /^BIG/ );
+    # return 'utf-8' if ( $_[0] =~ /^EUC/ );
+    # return 'windows-1252' if ( $_[0] eq 'Shift-JIS' );
+    return $_[0];
+
+}
+
 # Convert a byte string encoded in the {Site}{CharSet} to a byte
 # string encoded in utf8
 # Return 1 if a conversion happened, 0 otherwise
@@ -63,7 +78,11 @@ sub _convert_string {
         my $de = Encode::Detect::Detector::detect($old);
         if ( $de && $de ne $Foswiki::cfg{Site}{CharSet} ) {
             warning("$de encoding detected in $where");
-            $e = $de;
+
+            # Chance to tweak the encooding.
+            $e = _fixupDetect( $de, $old );
+            warning("Encoding $de overridden to $e by _fixupDetect()")
+              unless ( $e eq $de );
         }
     }
 
@@ -174,6 +193,7 @@ sub _rename_collection {
 sub _convert_topic {
     my ( $web, $topic ) = @_;
     my $converted = 0;
+    print STDERR "START conversion of $web/$topic\n";
 
     # Convert .txt,v
     my $handler =
