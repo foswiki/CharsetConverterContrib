@@ -112,13 +112,12 @@ sub _convert_string {
 
 sub _rename {
     my ( $from, $to ) = @_;
-    my $uto = Encode::decode_utf8($to);
-    report "Move $uto";
+    report "Move $from";
     $moveCount++;
     $renameCount++ if ( $from ne $to );
     return if ( $options->{-i} );
     File::Copy::move( $from, $to )
-      || error "Failed to rename $uto: $!";
+      || error "Failed to rename $from: $!";
 }
 
 =begin TML
@@ -165,7 +164,7 @@ sub _rename_collection {
     my $dir;
 
     my $webpath = $tree . '/' . $web . '/';
-    next unless -d $webpath;
+    return unless -d $webpath;
     my %rename;
     my @subcoll;
     opendir( $dir, $webpath ) || die "Failed to open '$webpath' $!";
