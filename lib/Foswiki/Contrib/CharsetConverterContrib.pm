@@ -26,6 +26,10 @@ our $SHORTDESCRIPTION =
 our $options;
 our $session;
 
+my $convertCount;
+my $moveCount;
+my $renameCount;
+
 sub report {
     return if $options->{-q};
     print STDERR join( ' ', @_ ) . "\n";
@@ -58,9 +62,11 @@ sub _fixupDetect {
 
     #my $enc, $data = @_;
 
-    # return 'iso-8859-1' if ( $_[0] =~ /^BIG/ );
-    # return 'utf-8' if ( $_[0] =~ /^EUC/ );
-    # return 'windows-1252' if ( $_[0] eq 'Shift-JIS' );
+    return 'iso-8859-1' if ( $_[0] eq 'gb18030' );
+    return 'iso-8859-1' if ( $_[0] =~ /^Big/ );
+    return 'utf-8'      if ( $_[0] =~ /^EUC/ );
+    return 'windows-1252' if ( $_[0] eq 'Shift_JIS' );
+
     return $_[0];
 
 }
@@ -108,6 +114,8 @@ sub _rename {
     my ( $from, $to ) = @_;
     my $uto = Encode::decode_utf8($to);
     report "Move $uto";
+    $moveCount++;
+    $renameCount++ if ( $from ne $to );
     return if ( $options->{-i} );
     File::Copy::move( $from, $to )
       || error "Failed to rename $uto: $!";
@@ -145,6 +153,8 @@ sub convert_database {
     _convert_topics_contents('');
 
     # And that's it!
+    print STDERR
+"CONVERSION FINISHED:   Moved:  $moveCount ($renameCount renamed)  Converted $convertCount\n";
 
     $session->finish();
 }
@@ -194,6 +204,7 @@ sub _convert_topic {
     my ( $web, $topic ) = @_;
     my $converted = 0;
     print STDERR "START conversion of $web/$topic\n";
+    $convertCount++;
 
     # Convert .txt,v
     my $handler =
