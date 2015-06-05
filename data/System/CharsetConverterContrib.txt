@@ -96,6 +96,16 @@ Only use =-r= if your site may contain content which cannot be decoded
 using the {Site}{CharSet} (if this is the case, -i will abort with an
 error).
 
+if the -r option is given, then any number of additional repair options
+can follow. These are of two types:
+   * =detected-encoding=actual-encoding=
+   * =topic-path=actual-encoding=
+The first allows you to override the encoding of *all* strings detected as
+=detected-encoding=, while the second allows you to select an individual topic
+and override the encoding of the content of just that topic. If you need to 
+override the encoding of a web or topic name, use =:N= after the topic-path
+e.g. =Sandbox/NorthKorea:N=EUC-KR=
+
 Once you have run the script without -i, all:
    * web names
    * topic names
@@ -108,6 +118,7 @@ Note that no conversion is performed on
    * log files
    * working/
    * temporary files
+   * password files
 
 Once conversion is complete you *must* change your ={Site}{CharSet}= to 'utf-8'.
 

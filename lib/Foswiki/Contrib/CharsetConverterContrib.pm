@@ -26,9 +26,8 @@ our $SHORTDESCRIPTION =
 our $options;
 our $session;
 
-my $convertCount;
-my $moveCount;
-my $renameCount;
+my $convertCount = 0;
+my $renameCount  = 0;
 
 sub report {
     return if $options->{-q};
@@ -54,42 +53,47 @@ sub detect_encoding {
     return;
 }
 
-# Add any hand-tuned fixups here to adjust for strange
-# encodings detected in your local data.  Passed 2 arguments
-# - The detected encoding,  and the data.
-#
-sub _fixupDetect {
-
-    #my $enc, $data = @_;
-
-    return 'iso-8859-1' if ( $_[0] eq 'gb18030' );
-    return 'iso-8859-1' if ( $_[0] =~ /^Big/ );
-    return 'utf-8'      if ( $_[0] =~ /^EUC/ );
-    return 'windows-1252' if ( $_[0] eq 'Shift_JIS' );
-
-    return $_[0];
-
-}
-
 # Convert a byte string encoded in the {Site}{CharSet} to a byte
 # string encoded in utf8
 # Return 1 if a conversion happened, 0 otherwise
 sub _convert_string {
-    my ( $old, $where ) = @_;
+    my ( $old, $where, $extra ) = @_;
     return 0 unless defined $old;
     my $e = $Foswiki::cfg{Site}{CharSet};
 
     if ( $options->{-r} ) {
-        require Encode::Detect::Detector;
-        my $de = Encode::Detect::Detector::detect($old);
-        if ( $de && $de ne $Foswiki::cfg{Site}{CharSet} ) {
-            warning("$de encoding detected in $where");
-
-            # Chance to tweak the encooding.
-            $e = _fixupDetect( $de, $old );
-            warning("Encoding $de overridden to $e by _fixupDetect()")
-              unless ( $e eq $de );
+        my $i = $where . ( $extra eq 'name of' ? ':N' : '' );
+        if ( $options->{$i} ) {
+            $e = $options->{$i};
+            warning("Encoding of $extra $where forced to $e by options");
         }
+        else {
+            require Encode::Detect::Detector;
+            my $de = Encode::Detect::Detector::detect($old);
+            if ( $de && $de !~ /^$Foswiki::cfg{Site}{CharSet}$/i ) {
+
+                # Support overrides
+                if ( $options->{$de} ) {
+                    $e = $options->{$de};
+                    warning(
+"Detected encoding $de overridden by options to $options->{$de} in $extra $where"
+                    );
+                }
+                else {
+                    warning(
+                        "Inconsistent $de encoding detected in $extra $where");
+                }
+            }
+        }
+    }
+
+    # Special case: if the site encoding is iso-8859-* or utf-8 and the string
+    # contains only 7-bit characters, then don't bother transcoding it
+    # (irrespective of any (probably incorrect) detected encoding)
+    if (   $Foswiki::cfg{Site}{CharSet} =~ /^(utf-8|iso-8859-1)$/
+        && $old !~ /[^\x00-~]/ )
+    {
+        return 0;
     }
 
     # Convert octets encoded using site charset to unicode codepoints.
@@ -98,6 +102,9 @@ sub _convert_string {
     my $t;
     eval { $t = Encode::decode( $e, $old, Encode::FB_CROAK ); };
     if ($@) {
+        warning(
+"Broken encoding detected in $extra $where - falling back to HTML entities"
+        );
 
         # Broken encoding; try using the {Site}{CharSet} with
         # HTMLCREF (good luck with that!)
@@ -113,11 +120,10 @@ sub _convert_string {
 sub _rename {
     my ( $from, $to ) = @_;
     report "Move $from";
-    $moveCount++;
-    $renameCount++ if ( $from ne $to );
-    return if ( $options->{-i} );
-    File::Copy::move( $from, $to )
-      || error "Failed to rename $from: $!";
+    unless ( $options->{-i} ) {
+        File::Copy::move( $from, $to )
+          || error "Failed to rename $from: $!";
+    }
 }
 
 =begin TML
@@ -134,6 +140,8 @@ sub convert_database {
     my (%args) = @_;
 
     $options = \%args;
+
+    report "Database is currently using $Foswiki::cfg{Site}{CharSet}";
 
     # Must do this before we construct the session object, otherwise the store
     # cache gets populated with Wrap handlers
@@ -153,17 +161,20 @@ sub convert_database {
 
     # And that's it!
     print STDERR
-"CONVERSION FINISHED:   Moved:  $moveCount ($renameCount renamed)  Converted $convertCount\n";
+      "CONVERSION FINISHED: Moved: $renameCount, Converted $convertCount\n";
 
     $session->finish();
 }
 
 # Rename a web and all it's contents if necessary
+# Note that this works recursively; it renames a directory, and
+# then recursively renames the contents in the renamed position.
+# As such the web passed in is always the 'new' name of that web.
 sub _rename_collection {
     my ( $tree, $web ) = @_;
     my $dir;
 
-    my $webpath = $tree . '/' . $web . '/';
+    my $webpath = "$tree/$web/";
     return unless -d $webpath;
     my %rename;
     my @subcoll;
@@ -175,13 +186,11 @@ sub _rename_collection {
 
         #print STDERR "Collected $e $Foswiki::cfg{Site}{CharSet}\n";
         my $ne = $e;
-        if ( _convert_string( $ne, "name $webpath$ne" ) ) {
-
-            # $ne is encoded using utf8 but is *not* perl internal
-            #my $blah = $ne;
-            #$blah = Encode::decode('utf-8', $ne);
-            #print STDERR "Converted $blah utf-8\n";
-            $rename{ $webpath . $e } = $webpath . $ne;
+        if ( _convert_string( $ne, "$web/$ne", "name of" ) ) {
+            if ( $ne ne $e ) {
+                $renameCount++;
+                $rename{"$webpath$e"} = "$webpath$ne";
+            }
         }
         if ( -d $webpath . $e ) {
             push( @subcoll, $web ? "$web/$ne" : $ne );
@@ -191,8 +200,8 @@ sub _rename_collection {
     while ( my ( $old, $new ) = each %rename ) {
         _rename( $old, $new );
     }
-    foreach $dir (@subcoll) {
-        _rename_collection( $tree, $dir );
+    foreach my $sweb (@subcoll) {
+        _rename_collection( $tree, $sweb );
     }
 }
 
@@ -202,8 +211,6 @@ sub _rename_collection {
 sub _convert_topic {
     my ( $web, $topic ) = @_;
     my $converted = 0;
-    print STDERR "START conversion of $web/$topic\n";
-    $convertCount++;
 
     # Convert .txt,v
     my $handler =
@@ -217,24 +224,29 @@ sub _convert_topic {
     if ( $handler->{state} ne 'nocommav' ) {
 
         # need to convert fields
+        my $t  = ( stat( $handler->{rcsFile} ) )[9];
         my $n  = 1;
-        my $in = "content of $uh,v";
+        my $in = "$uh,v";
         foreach my $rev ( @{ $handler->{revs} } ) {
-            $converted += _convert_string( $rev->{text}, $in )
+            $converted += _convert_string( $rev->{text}, $in, "content of" )
               if defined $rev->{text};
-            $converted += _convert_string( $rev->{log}, $in )
+            $converted += _convert_string( $rev->{log}, $in, "log in" )
               if defined $rev->{log};
-            $converted += _convert_string( $rev->{comment}, $in )
+            $converted += _convert_string( $rev->{comment}, $in, "comment in" )
               if defined $rev->{comment};
-            $converted += _convert_string( $rev->{desc}, $in )
+            $converted += _convert_string( $rev->{desc}, $in, "desc in" )
               if defined $rev->{desc};
-            $converted += _convert_string( $rev->{author}, $in )
+            $converted += _convert_string( $rev->{author}, $in, "author of" )
               if defined $rev->{author};
         }
         if ($converted) {
-            report "Converted history of $uh ($converted changes)";
+            report "Converted $uh.txt,v ($converted changes)";
+            $convertCount++;
             unless ( $options->{-i} ) {
-                eval { $handler->_writeMe(); };
+                eval {
+                    $handler->_writeMe();
+                    utime( $t, $t, $handler->{rcsFile} );
+                };
                 if ($@) {
                     error
 "Failed to write $uh history. Existing history may be corrupt: $@";
@@ -243,15 +255,20 @@ sub _convert_topic {
         }
     }
     else {
-        report "No $uh history to convert";
+        report "No $uh history to convert" unless $options->{-i};
     }
 
     # Convert .txt
+    my $t   = ( stat( $handler->{file} ) )[9];
     my $raw = $handler->readFile( $handler->{file} );
-    $converted = _convert_string( $raw, "content of $handler->{file}" );
+    $converted = _convert_string( $raw, $handler->{file}, "content of" );
     if ($converted) {
-        report "Converted .txt of $uh";
-        $handler->saveFile( $handler->{file}, $raw ) unless $options->{-i};
+        report "Converted $uh.txt";
+        $convertCount++;
+        unless ( $options->{-i} ) {
+            $handler->saveFile( $handler->{file}, $raw );
+            utime( $t, $t, $handler->{file} );
+        }
     }
 }
 

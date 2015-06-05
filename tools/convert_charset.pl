@@ -1,4 +1,4 @@
-#!/usr/bin/perl
+#!/usr/bin/env perl
 # See bottom of file for license and copyright information
 #
 # Foswiki inherited a horrible legacy, in that it is configured with a
@@ -55,34 +55,12 @@ unless ( $args{-i} ) {
 
 Foswiki RCS database character set conversion
 
-   -i - inspect - what would be done only, do not convert anything
-   -q - quietly - (unless there's an error)
-   -a - abort - on error (default is to report and continue)
-   -r - repair - detect the encoding of each string and repair
-        inconsistencies. (requires Encode::Detect)
- 
 This script will convert the Foswiki RCS database pointed at by
 {DataDir} and {PubDir} from the existing character set (as set
 by {Site}{CharSet}) to UTF8.
 
-You can run the script in "inspection" mode by passing -i on the
-command line. No changes will be made to the database. If it fails
-with an encoding error, run it with -r.
-
-Once you have run the script without -i, all:
-    * web names
-    * topic names
-    * attachment names
-    * topic content
-will be converted to UTF8. The conversion is performed *in place* on the data
-and pub directories.
-
-Note that no conversion is performed on
-   * log files
-   * working/
-   * temporary files
-
-Once conversion is complete you must change your {Site}{CharSet} to 'utf-8'
+For more information, see System.CharsetConverterContrib in your local
+wiki or http://foswiki.org/Extensions/CharsetConverterContrib
 INFORM
     die 'Cannot proceed without backup confirmation'
       unless ask(
