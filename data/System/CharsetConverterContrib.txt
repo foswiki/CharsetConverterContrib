@@ -1,4 +1,4 @@
-%META:TOPICINFO{author="ProjectContributor" version="1" date="1402505433"}%
+%META:TOPICINFO{author="ProjectContributor" version="1" date="1433640057"}%
 <!--
    * Set SHORTDESCRIPTION = %$SHORTDESCRIPTION%
 -->
@@ -9,7 +9,7 @@
 %TOC%
 
 This module is used to convert the character set encoding used in
-*RcsWrap and RcsLite* stores.
+*RcsWrap and !RcsLite* stores.
 
 The character set encoding determines the range of characters that can be
 used in for naming wiki topics and attachments, and in content
@@ -36,7 +36,7 @@ associated with the entire database, and not with individual topics.
 It was even possible to paste content in a different encoding into the
 text editor and have it stored in that encoding, resulting in what looked
 like garbled topics.
- 
+
 Ideally all Foswikis should use UTF-8, even those that are still using
 older Foswikis, but we have a legacy of existing sites that don't. So we
 need some way to convert an RCS-based wiki from any existing character
@@ -52,7 +52,7 @@ histories.
 Even if you don't have an immediate need for non-western character sets
 this is worth doing, as Foswiki 1.2.0 and later work exclusively with
 UTF-8 content.
- 
+
 Note that this module converts all the histories of all your topics,
 as well as the latest version of the topic. It also maps all web,
 topic and attachment names. It does not, however, touch the _content_ of
@@ -61,7 +61,7 @@ attachments.
 ---++ Installation
 This extension is tested with Foswiki 1.1.0 and later. If your Foswiki
 installation is older than that, then upgrade your Foswiki first.
-Note that the extension *is not required* and *will not work* on Foswiki
+Note that the extension *is not required* on Foswiki
 1.2.0 or later. If your requirement is part of an upgrade to Foswiki 1.2.0,
 then either:
    1 convert the 1.1.x Foswiki to UTF-8 using this extension first, or
@@ -70,6 +70,8 @@ then either:
 %$INSTALL_INSTRUCTIONS%
 
 ---++ Usage
+<div class="foswikiHelp">%X% *The conversion process updates data in-place, and cannot be reversed.  Be sure to take a backup before running this tool.* </div>
+
 The convertor is used from the command-line on your wiki server (if you do
 not have access to the command line then we are sorry, but there is currently
 no way for you to use the conversion).
@@ -91,6 +93,9 @@ Options:
 | =-q= | quiet - work silently (unless there's an error) |
 | =-a= | abort - on error (default is to report and continue) |
 | =-r= | repair - detect the encoding of each string and repair inconsistencies. |
+| | __Expert options__ |
+| =-web=webname= | Restrict conversion to a single web and it's subwebs. |
+| =-encoding=charset= | Override the source encoding. |
 
 Only use =-r= if your site may contain content which cannot be decoded
 using the {Site}{CharSet} (if this is the case, -i will abort with an
@@ -102,9 +107,17 @@ can follow. These are of two types:
    * =topic-path=actual-encoding=
 The first allows you to override the encoding of *all* strings detected as
 =detected-encoding=, while the second allows you to select an individual topic
-and override the encoding of the content of just that topic. If you need to 
+and override the encoding of the content of just that topic. If you need to
 override the encoding of a web or topic name, use =:N= after the topic-path
 e.g. =Sandbox/NorthKorea:N=EUC-KR=
+
+Although this exension is intended for use on Foswiki 1.1, there may be cases
+where an individual web requires conversion on a Foswiki 1.2 system.  For example,
+conversion of a single web migrated at a later date from an older system.  For
+example, convert the oops web from =iso-8859-1= on a system already converted
+to =utf-8=. *Use extreme caution converting individual webs. Foswiki does
+*not* support mixed encoding.
+=perl convert_charset.pl -web=Oops -encoding=iso-8859-1 -i=
 
 Once you have run the script without -i, all:
    * web names

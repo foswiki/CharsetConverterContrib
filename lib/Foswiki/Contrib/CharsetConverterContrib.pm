@@ -29,6 +29,9 @@ our $session;
 my $convertCount = 0;
 my $renameCount  = 0;
 
+my $storeEncoding;
+my $storeVersion;
+
 sub report {
     return if $options->{-q};
     print STDERR join( ' ', @_ ) . "\n";
@@ -59,7 +62,7 @@ sub detect_encoding {
 sub _convert_string {
     my ( $old, $where, $extra ) = @_;
     return 0 unless defined $old;
-    my $e = $Foswiki::cfg{Site}{CharSet};
+    my $e = $storeEncoding;
 
     if ( $options->{-r} ) {
         my $i = $where . ( $extra eq 'name of' ? ':N' : '' );
@@ -70,7 +73,7 @@ sub _convert_string {
         else {
             require Encode::Detect::Detector;
             my $de = Encode::Detect::Detector::detect($old);
-            if ( $de && $de !~ /^$Foswiki::cfg{Site}{CharSet}$/i ) {
+            if ( $de && $de !~ /^$storeEncoding$/i ) {
 
                 # Support overrides
                 if ( $options->{$de} ) {
@@ -90,7 +93,7 @@ sub _convert_string {
     # Special case: if the site encoding is iso-8859-* or utf-8 and the string
     # contains only 7-bit characters, then don't bother transcoding it
     # (irrespective of any (probably incorrect) detected encoding)
-    if (   $Foswiki::cfg{Site}{CharSet} =~ /^(utf-8|iso-8859-1)$/
+    if (   $storeEncoding =~ /^(utf-8|iso-8859-1)$/
         && $old !~ /[^\x00-~]/ )
     {
         return 0;
@@ -141,7 +144,30 @@ sub convert_database {
 
     $options = \%args;
 
-    report "Database is currently using $Foswiki::cfg{Site}{CharSet}";
+    if ( $Foswiki::VERSION < 1.1.999 ) {
+        report "Detected Foswiki Version 1.1 or older";
+        $storeVersion = 1;
+    }
+    else {
+        report "Detected Foswiki Version >= 1.2";
+        $storeVersion = 2;
+    }
+
+    if ( $options->{-encoding} ) {
+        $storeEncoding = $options->{-encoding};
+        report "Store encoding ignored, using encoding $storeEncoding";
+    }
+    elsif ( $storeVersion == 2 ) {
+        $storeEncoding = $Foswiki::cfg{Store}{Encoding} || 'utf-8';
+        report "Foswiki 1.2 Database, using encoding $storeEncoding";
+    }
+    else {
+        $storeEncoding = $Foswiki::cfg{Site}{CharSet};
+        report "Foswiki 1.1 Database, using encoding $storeEncoding";
+    }
+
+    my $web = $options->{-web} || '';
+    report "Processing restriced to $web web" if $web;
 
     # Must do this before we construct the session object, otherwise the store
     # cache gets populated with Wrap handlers
@@ -151,17 +177,18 @@ sub convert_database {
     # First we rename all webs and files as necessary by
     # calling the recursive collection rename on the root web
     foreach my $tree ( $Foswiki::cfg{DataDir}, $Foswiki::cfg{PubDir} ) {
-        _rename_collection( $tree, '' );
+        _rename_collection( $tree, $web );
     }
 
     # All file and directory names should now be utf8
 
     # Now we convert the content of topics
-    _convert_topics_contents('');
+    _convert_topics_contents($web);
 
     # And that's it!
-    print STDERR
-      "CONVERSION FINISHED: Moved: $renameCount, Converted $convertCount\n";
+    report "CONVERSION FINISHED: "
+      . ( ( $options->{-i} ) ? '(simulated) ' : '' )
+      . "Moved: $renameCount, Converted $convertCount\n";
 
     $session->finish();
 }
@@ -184,7 +211,7 @@ sub _rename_collection {
     foreach my $e ( readdir($dir) ) {
         next if $e =~ /^\./;
 
-        #print STDERR "Collected $e $Foswiki::cfg{Site}{CharSet}\n";
+        #print STDERR "Collected $e $storeEncoding\n";
         my $ne = $e;
         if ( _convert_string( $ne, "$web/$ne", "name of" ) ) {
             if ( $ne ne $e ) {
@@ -213,9 +240,18 @@ sub _convert_topic {
     my $converted = 0;
 
     # Convert .txt,v
-    my $handler =
-      Foswiki::Store::VC::RcsLiteHandler->new( $session->{store}, $web,
-        $topic );
+    my $handler;
+
+    if ( $storeVersion == 2 ) {
+        $handler =
+          Foswiki::Store::Rcs::RcsLiteHandler->new( $session->{store}, $web,
+            $topic );
+    }
+    else {
+        $handler =
+          Foswiki::Store::VC::RcsLiteHandler->new( $session->{store}, $web,
+            $topic );
+    }
     my $uh = Encode::decode_utf8("$web.$topic");
 
     # Force reading of the topic history, all the way down to revision 1
