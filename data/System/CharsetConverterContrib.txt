@@ -18,11 +18,11 @@ stored in topics.
 (To understand what this means on a technical level, read
 Foswiki:Development.UnderstandingEncodings)
 
-Before Foswiki 1.2.0, Foswiki had to be configured with a ={Site}{CharSet}=,
+Before Foswiki 2.0, Foswiki had to be configured with a ={Site}{CharSet}=,
 which set the encoding used for characters in topic and attachment names,
 and topic content.
 
-The default encoding used by Foswiki before 1.2.0 was iso-8859-1, which was a
+The default encoding used by Foswiki before 2.0 was iso-8859-1, which was a
 reasonable choice for many western languages.  However there are many
 other languages (for example, Arabic, Chinese, Hebrew, Hindi) that have
 characters that do not appear in this character set. Even some basic characters
@@ -50,7 +50,7 @@ then this module can convert it to using UTF-8, including all the topic
 histories.
 
 Even if you don't have an immediate need for non-western character sets
-this is worth doing, as Foswiki 1.2.0 and later work exclusively with
+this is worth doing, as Foswiki 2.0 and later work exclusively with
 UTF-8 content.
 
 Note that this module converts all the histories of all your topics,
@@ -61,8 +61,9 @@ attachments.
 ---++ Installation
 This extension is tested with Foswiki 1.1.0 and later. If your Foswiki
 installation is older than that, then upgrade your Foswiki first.
-Note that the extension *is not required* on Foswiki
-1.2.0 or later. If your requirement is part of an upgrade to Foswiki 1.2.0,
+
+Note that the extension *is not required* and *will not work* on Foswiki
+2.0 or later. If your requirement is part of an upgrade to Foswiki 2.0,
 then either:
    1 convert the 1.1.x Foswiki to UTF-8 using this extension first, or
    1 use =tools/bulk_copy.pl=, as recommended in the release notes.
