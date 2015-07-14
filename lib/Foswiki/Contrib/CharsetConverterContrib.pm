@@ -19,7 +19,7 @@ use warnings;
 use File::Copy;
 
 our $VERSION = '1.2';
-our $RELEASE = '1 Jun 2015';
+our $RELEASE = '14 Jul 2015';
 our $SHORTDESCRIPTION =
   'Convert entire Foswiki RCS databases from one character set to UTF-8';
 

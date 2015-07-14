@@ -62,11 +62,15 @@ attachments.
 This extension is tested with Foswiki 1.1.0 and later. If your Foswiki
 installation is older than that, then upgrade your Foswiki first.
 
-Note that the extension *is not required* and *will not work* on Foswiki
+Note that the extension *is not required* and *is not recommended* on Foswiki
 2.0 or later. If your requirement is part of an upgrade to Foswiki 2.0,
 then either:
    1 convert the 1.1.x Foswiki to UTF-8 using this extension first, or
    1 use =tools/bulk_copy.pl=, as recommended in the release notes.
+
+Version 1.2 of this extension has *limited* support for Foswiki 2.0 
+systems. It can be used *with caution and a backup* to detect characterset
+issues on a 2.0 installation.
 
 %$INSTALL_INSTRUCTIONS%
 
