@@ -18,8 +18,8 @@ use strict;
 use warnings;
 use File::Copy;
 
-our $VERSION = '1.2';
-our $RELEASE = '14 Jul 2015';
+our $VERSION = '1.3';
+our $RELEASE = '15 Jul 2015';
 our $SHORTDESCRIPTION =
   'Convert entire Foswiki RCS databases from one character set to UTF-8';
 
@@ -144,7 +144,7 @@ sub convert_database {
 
     $options = \%args;
 
-    if ( $Foswiki::VERSION < 1.1.999 ) {
+    if ( $Foswiki::RELEASE =~ m/^Foswiki-1\.[01]/ ) {
         report "Detected Foswiki Version 1.1 or older";
         $storeVersion = 1;
     }
@@ -159,7 +159,7 @@ sub convert_database {
     }
     elsif ( $storeVersion == 2 ) {
         $storeEncoding = $Foswiki::cfg{Store}{Encoding} || 'utf-8';
-        report "Foswiki 1.2 Database, using encoding $storeEncoding";
+        report "Foswiki 2.0 Database, using encoding $storeEncoding";
     }
     else {
         $storeEncoding = $Foswiki::cfg{Site}{CharSet};

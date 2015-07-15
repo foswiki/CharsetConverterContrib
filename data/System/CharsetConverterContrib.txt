@@ -1,4 +1,4 @@
-%META:TOPICINFO{author="ProjectContributor" version="1" date="1433640057"}%
+%META:TOPICINFO{author="ProjectContributor" version="1" date="1436920231"}%
 <!--
    * Set SHORTDESCRIPTION = %$SHORTDESCRIPTION%
 -->
@@ -117,7 +117,7 @@ override the encoding of a web or topic name, use =:N= after the topic-path
 e.g. =Sandbox/NorthKorea:N=EUC-KR=
 
 Although this exension is intended for use on Foswiki 1.1, there may be cases
-where an individual web requires conversion on a Foswiki 1.2 system.  For example,
+where an individual web requires conversion on a Foswiki 2.0 system.  For example,
 conversion of a single web migrated at a later date from an older system.  For
 example, convert the oops web from =iso-8859-1= on a system already converted
 to =utf-8=. *Use extreme caution converting individual webs. Foswiki does
