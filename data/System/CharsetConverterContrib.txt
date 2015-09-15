@@ -140,6 +140,16 @@ Note that no conversion is performed on
 
 Once conversion is complete you *must* change your ={Site}{CharSet}= to 'utf-8'.
 
+---++ Info
+
+|  Change History: | |
+| 1.4 (15 Sep 2015) | Foswikitask:Item13702 - Actually use the encoding detected by -r repair option. |
+| 1.3 (15 Jul 2015) | Foswikitask:Item13523 - Better job of detecting Foswiki 2.0. |
+| 1.2 (1 Jun 2015 ) | Foswikitask:Item13442 - Add repair option to detect exceptions to the encoding. Add limited support for Foswiki 2.0.<br/>\
+                      Add more flexible overrides for detected encoding. |
+| 1.1 (11 Jun 2014) | |
+
+
 ---++ Dependencies
 
 %$DEPENDENCIES%

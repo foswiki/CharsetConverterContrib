@@ -18,8 +18,8 @@ use strict;
 use warnings;
 use File::Copy;
 
-our $VERSION = '1.3';
-our $RELEASE = '15 Jul 2015';
+our $VERSION = '1.4';
+our $RELEASE = '15 Sep 2015';
 our $SHORTDESCRIPTION =
   'Convert entire Foswiki RCS databases from one character set to UTF-8';
 
@@ -74,6 +74,8 @@ sub _convert_string {
             require Encode::Detect::Detector;
             my $de = Encode::Detect::Detector::detect($old);
             if ( $de && $de !~ /^$storeEncoding$/i ) {
+                warning("Encoding $e overridden by detected encoding $de");
+                $e = $de;
 
                 # Support overrides
                 if ( $options->{$de} ) {
